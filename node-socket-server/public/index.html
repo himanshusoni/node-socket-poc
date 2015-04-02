@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Node Cellar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+        }
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+
+    <script src="http://use.edgefonts.net/andika.js"></script>
+    <script src="http://use.edgefonts.net/arvo.js"></script>
+
+</head>
+
+<html>
+<body>
+
+<div class="header">
+    <div class="navbar navbar-fixed-top" style="z-index: 10;">
+        <div class="navbar-inner">
+            <div class="container">
+                <a class="brand" href="#">Real Time Analytics</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="row-fluid" >
+
+        <div id="content" class="span12">
+
+
+            <div class="well span3" style="text-align: center;">
+                    <h3>Right Now</h3>
+                    <p id="connections" style="font-size: 96px;line-height: 96px;">0</p>
+                    <h5>active users</h5>
+            </div>
+
+            <div class="span9">
+
+                <legend>Real Time Activity</legend>
+                <div class="row-fluid">
+                    <table id="visits" class="table table-bordered table-striped table-condensed">
+                        <thead>
+                            <tr><td>Username</td><td>latitude</td><td>longitude</td><td>timestamp</td></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <legend>user status</legend>
+                <div class="row-fluid">
+                    <table id="pageViews" class="table table-bordered table-striped table-condensed">
+                        <thead>
+                            <tr><td>username</td><td>status</td></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Built as a sample application with
+            <a href="http://nodejs.org/">Node.js</a>,
+            <a href="http://socket.io/">Socket.io</a>,
+            <a href="http://expressjs.com/">Express</a>, and
+        <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a>,
+        by <a href="http://coenraets.org" target="_blank">Christophe Coenraets</a>.<br/>
+        The source code for this application is available in <a href="#">this repository</a> on GitHub.</p>
+    </footer>
+
+</div>
+
+<script type="text/javascript" src="socket.io/socket.io.js"></script>
+<script type="text/javascript" src="lib/jquery-1.8.2.min.js"></script>
+
+<script>
+	//var io = require('socket.io');
+	var SERVER_URL = "http://192.168.0.9:8080/admin";
+    //var io = io('/admin');
+    var socket = io(SERVER_URL);
+    // connect to the admin namespaces
+    //socket = socket.of('/admin');
+    var clients = {};
+    var pages = {};
+    var lastPageId = 0;
+
+    socket.on('connect', function () {
+        var totalconnections = 0;
+        console.log('Socket connected');
+        socket.on('receivedata',function(data){
+            console.log("all data");
+            // clear all tables
+            for(var key in data){
+                clients[key.user_id] = {username: msg.user_id, status : 'Active'};
+                 $('#pageViews tbody').append('<tr><td>' + msg.username + '</td><td id="page' + msg.status + '">'+msg.status+'</td></tr>');
+            }
+        });
+
+        // receives : msg {username,status,connections(total active connections)}
+        socket.on('clientupdate', function (msg) {
+            console.log('admin page, clientupdate');
+        $('#connections').html(msg.connections);
+        totalconnections = msg.connections;
+           if (msg.username) {
+                console.log("update ui");
+                if (clients[msg.username]) {
+                    clients[msg.username].status = msg.status;
+                    $('#page' + clients[msg.username].username).html(msg.   status);
+                } else {
+                    clients[msg.username] = {username: msg.username, status : msg.status};
+                    $('#pageViews tbody').append('<tr><td>' + msg.username + '</td><td id="page' + msg.status + '">'+msg.status+'</td></tr>');
+                }
+            }
+        });
+
+        // keeps only 20 latest updates.
+        // receives : msg {username,latitude,longitude,timestamp}
+        socket.on('updatelocation', function (msg) {
+            console.log('admin page, location update');
+            if (msg.username) {
+                if ($('#visits tr').length > 20) {
+                    $('#visits tr:last').remove();
+                }
+                console.log("add row to locatios");
+                $('#visits tbody').prepend('<tr><td>' + msg.username + '</td><td>' + msg.latitude + '</td><td>' + msg.longitude + '</td><td>' + msg.timestamp + '</td></tr>');
+            }
+        });
+
+        socket.on('disconnect', function () {
+            //$('#connections').html(totalconnections-1);
+        });
+    });
+
+
+</script>
+
+</body>
+</html>
