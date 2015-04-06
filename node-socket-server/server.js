@@ -29,16 +29,6 @@ console.log("Server has started.");
 var socketClientList = [];
 var userData = [];
 
-/*io.configure(function () {
-    io.set('authorization', function (handshakeData, callback) {
-        if (handshakeData.xdomain) {
-            callback('Cross-domain connections are not allowed');
-        } else {
-            callback(null, true);
-        }
-    });
-});*/
-
 server.listen(app.get('port'), function () {
     console.log("Express server listening on port " + app.get('port'));
 });
@@ -86,6 +76,16 @@ function insertLocation(loc){
     }
   });
 }
+
+/*io.configure(function () {
+    io.set('authorization', function (handshakeData, callback) {
+        if (handshakeData.xdomain) {
+            callback('Cross-domain connections are not allowed');
+        } else {
+            callback(null, true);
+        }
+    });
+});*/
 
 // /admin is the admin namespace used for the dashboard
 var adminSocket = io.of('/admin');
