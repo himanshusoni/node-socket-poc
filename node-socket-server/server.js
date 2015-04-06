@@ -1,26 +1,21 @@
-var http = require('http');
-var url = require('url');
-var qs = require('querystring');
-var io = require('socket.io');
-var fs = require('fs');
+var express = require('express'),
+    path = require('path'),
+    http = require('http'),
+    io = require('socket.io');
+    logger = require('morgan');
+    bodyParser = require('body-parser');
+    util = require('util');
+    //wine = require('./routes/wines');
 
-var port = 8080;
+var app = express();
 
-var map_clients = [];
+//app.configure(function () {
+    app.set('port', process.env.PORT || 8100);
+    app.use(logger('dev'));
+    app.use(bodyParser.urlencoded({ extended: true }))
+    app.use(express.static(path.join(__dirname, 'public')));
+//});
 
-//console.log('connectionString:' + connectionString);
-/*
-  write mysql connection.
-  Use connection pooling later, to allow concurrent users support
-  var pool      =    mysql.createPool({
-    connectionLimit : 100, //important
-    host     : 'localhost',
-    user     : 'root',
-    password : '',
-    database : 'address_book',
-    debug    :  false
-});
-*/
 var mysql      = require('mysql');
 var connection = mysql.createConnection({
   host     : 'localhost',
@@ -29,72 +24,29 @@ var connection = mysql.createConnection({
   database : '<your database name>'
 });
 
-var route = {
-  routes : {},
-  for: function(method, path, handler){
-    this.routes[method + path] = handler;
-  }
-}
+var server = http.createServer(app);
+io = io.listen(server);
+console.log("Server " + server.host + " has started.");
 
-route.for("GET", "/", function(request, response){
-  fs.readFile('./index.html', function (err, html) {
-    if (err) {
-        throw err; 
-    }       
-        response.writeHeader(200, {"Content-Type": "text/html"});  
-        response.write(html);  
-        response.end();  
-  });
-});
-route.for("POST", "/location", function(request, response){
-  var form_data = "";
-  request.on('data', function(chunk){
-    form_data += chunk.toString();
-  })
+var map_clients = [];
 
-console.log("Connected clients in post location : " + map_clients.length);
-  request.on('end', function(){
-    console.log(form_data);
+// {username,socketClient,status}
 
-    var obj = qs.parse(form_data);
-    insertLocation(obj);
-    console.log("Connected clients: " + map_clients.length);
+var userData = [];
 
-    for(var i=0; i < map_clients.length; i++){
-      var client = map_clients[i];
-      console.log("client.user_id:" + client.user_id);
-      console.log("client.devices:" + client.devices);
-
-      if (typeof client.devices != "undefined") {
-        if(isAllowed(client.devices, obj.uuid)){
-          console.log("Sending gps to viewer: " + client.user_id);
-          console.log("Devices: " + client.devices);
-
-          var jsonString = JSON.stringify({ type:'gps', data:obj});
-          client.send(jsonString);
+/*io.configure(function () {
+    io.set('authorization', function (handshakeData, callback) {
+        if (handshakeData.xdomain) {
+            callback('Cross-domain connections are not allowed');
+        } else {
+            callback(null, true);
         }
-      }
+    });
+});*/
 
-    }
-
-    response.writeHead(200, {"Content-Type": "text/plain"});
-    response.write("OK");
-    response.end();
-  })
+server.listen(app.get('port'), function () {
+    console.log("Express server listening on port " + app.get('port'));
 });
-
-function onRequest(request, response){
-  var pathname = url.parse(request.url).pathname;
-  console.log(request.method + " request for " + pathname);
-
-  if(typeof(route.routes[request.method + pathname]) === 'function'){
-    route.routes[request.method + pathname](request, response);
-  }
-  else{
-    response.writeHead(404, {"Content-Type": "text/plain"});
-    response.end("404 not found");
-  }
-}
 
 function insertuser(user){
   connection.connect(function(err){
@@ -144,26 +96,45 @@ function isAllowed(devices_array, uuid){
   return devices_array.indexOf(uuid) > -1;
 }
 
-var server = http.createServer(onRequest);
+/*var server = http.createServer(onRequest);
 server.listen(port);
 console.log("Server " + port + " has started.");
 
 io = io.listen(server);
+*/
 
 var adminSocket = io.of('/admin');
 adminSocket.on('connection', function(socket){
   console.log('Admin connected');
+  var usernameData = [];
+  console.log('userData length : ' + userData.length);
+  for (var key in userData) {
+    usernameData.push(userData[key].username);
+  }
+  socket.emit('receivedata',usernameData);
 
-
+  socket.on('notifyuser', function(username){
+    if(true){ // check for empty object
+      var clientuser = userData.filter(function( el ) {
+        console.log(" uName : " + el.username);
+        return el.username == username;
+      });
+      //console.log("===USER data" + util.inspect(userData));
+      //console.log("===FOUND USER data===" + util.inspect(clientuser));
+      //console.log("notifying client user " + username + " found " + clientuser[0].username);
+      console.log('notifyuser ' + username);
+      clientuser[0].socketClient.emit('notifyuser','some message');
+    }
+  });
 });
 
 var clientupdate = function(data){
   var msg = {
     username : data.username,
-    status : data.connectionStatus,
+    status : data.status,
     connections : data.connections
   };
-  adminSocket.emit('clientupdate',msg);
+  io.of('/admin').emit('clientupdate',msg);
 };
 
 var updatelocation = function(data){
@@ -173,7 +144,8 @@ var updatelocation = function(data){
     longitude : data.longitude,
     timestamp : data.timestamp
   };
-  adminSocket.emit('updatelocation',msg);
+  console.log('updatelocation to admin');
+  io.of('/admin').emit('updatelocation',msg);
 };
 
 var userio = io.of('/users');
@@ -184,16 +156,25 @@ userio.on("connection", function(client){
   map_clients.push(client);
   /* push to db */
 
+  //var myObject = JSON.stringify(client);
+  console.log("client data" + util.inspect(client));
   console.log("connect with hostname " + client.hostname);
   client.on('setUserId',function(user_id){
+
+     var user = {
+        username : user_id,
+        socketClient : client,
+        status : 'Active'
+     };
+     var found = userData.some(function (el) {
+        return el.username === user_id;
+      });
+    if (!found) { userData.push(user); }
+
     console.log("client connected for user_id: " + user_id);
     client.user_id = user_id;
 
-    // insert the user id in db
-    //insertuser(user_id);
-    // once user_id is pushed. Add a row to the table and mark status as connected
-
-    // send back join message
+    clientupdate({username : client.user_id, status : 'Active',connections : map_clients.length});
   });
 
   client.on('addDevice',function(device_id){
@@ -206,12 +187,15 @@ userio.on("connection", function(client){
     client.devices.push(device_id);
   });
 
-  client.on('updatelocation',function(data){
-    // uuid ? and user id ?
-    //insertLocation(data);
-
+  client.on('updatelocation',function(location){
+    var data = {
+        username : client.user_id,
+        latitude : location,
+        longitude : '55',
+        timestamp : new Date()
+    };
     updatelocation(data);
-    console.log("location update: " + map_clients.length + " : " + data);
+    console.log("location update: " + map_clients.length + " : " + client.user_id);
 
     // can add a row to the locations updates table
   });
@@ -221,6 +205,7 @@ userio.on("connection", function(client){
     map_clients.splice(map_clients.indexOf(client), 1);
 
     clientupdate({username : client.user_id, status : 'Inactive',connections : map_clients.length});
+    userData.splice(userData.indexOf(userData.socketClient));
     // set status of the client as disconnected
   });
 });

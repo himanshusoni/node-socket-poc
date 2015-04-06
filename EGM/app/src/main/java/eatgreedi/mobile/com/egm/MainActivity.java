@@ -6,11 +6,17 @@ import java.util.Date;
 import java.util.Locale;
 
 import android.app.AlertDialog;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -76,6 +82,7 @@ public class MainActivity extends ActionBarActivity {
         mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         mSocket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
         mSocket.on("join response", onJoinMessage);
+        mSocket.on("notifyuser", notifyuser);
         // connect to the socket
         mSocket.connect();
 
@@ -232,6 +239,24 @@ public class MainActivity extends ActionBarActivity {
                 public void run() {
                     Toast.makeText(getApplicationContext(),
                             "Error in connecting", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener notifyuser = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    /*
+                    Intent notifyIntent = new Intent("eatgreedi.mobile.com.egm.NotifyUser");
+                    notifyIntent.putExtra("message","some message");
+                    sendBroadcast(notifyIntent);
+                    */
+                    Toast.makeText(getApplicationContext(),
+                            "Some Message Received in main", Toast.LENGTH_LONG).show();
                 }
             });
         }

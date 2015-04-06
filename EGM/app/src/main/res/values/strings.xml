@@ -8,6 +8,6 @@
     <string name="title_section3">Section 3</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
-    <string name="default_upload_website">http://192.168.0.9:8080/users</string>
+    <string name="default_upload_website">http://192.168.0.9:8100/users</string>
 
 </resources>

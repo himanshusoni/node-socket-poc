@@ -67,6 +67,7 @@ public class LocationService extends Service implements
             } catch (URISyntaxException e) {
 
             }
+            mSocket.on("notifyuser", notifyuser);
             mSocket.on(Socket.EVENT_CONNECT, onConnect);
         }
     }
@@ -298,6 +299,8 @@ public class LocationService extends Service implements
                     notifyIntent.putExtra("message","some message");
                     sendBroadcast(notifyIntent);
                     */
+                    Toast.makeText(getApplicationContext(),
+                            "Some Message Received", Toast.LENGTH_LONG).show();
 
                     NotificationCompat.Builder mBuilder =
                             new NotificationCompat.Builder(getApplicationContext())
