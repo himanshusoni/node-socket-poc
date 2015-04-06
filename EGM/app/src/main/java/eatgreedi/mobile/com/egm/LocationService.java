@@ -97,8 +97,6 @@ public class LocationService extends Service implements
 
         if (GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
            // TODO recheck this
-           // mLocationClient = new LocationClient(this,this,this);
-
             if (!mLocationClient.isConnected() || !mLocationClient.isConnecting()) {
                 mLocationClient.connect();
             }
@@ -108,90 +106,10 @@ public class LocationService extends Service implements
     }
 
     protected void sendLocationDataToWebsite(Location location) {
-        // formatted for mysql datetime format
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        dateFormat.setTimeZone(TimeZone.getDefault());
-        Date date = new Date(location.getTime());
-
-        SharedPreferences sharedPreferences = this.getSharedPreferences("com.websmithing.gpstracker.prefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        float totalDistanceInMeters = sharedPreferences.getFloat("totalDistanceInMeters", 0f);
-
-        boolean firstTimeGettingPosition = sharedPreferences.getBoolean("firstTimeGettingPosition", true);
-
-        if (firstTimeGettingPosition) {
-            editor.putBoolean("firstTimeGettingPosition", false);
-        } else {
-            Location previousLocation = new Location("");
-            previousLocation.setLatitude(sharedPreferences.getFloat("previousLatitude", 0f));
-            previousLocation.setLongitude(sharedPreferences.getFloat("previousLongitude", 0f));
-
-            float distance = location.distanceTo(previousLocation);
-            totalDistanceInMeters += distance;
-            editor.putFloat("totalDistanceInMeters", totalDistanceInMeters);
-        }
-
-        editor.putFloat("previousLatitude", (float)location.getLatitude());
-        editor.putFloat("previousLongitude", (float)location.getLongitude());
-        editor.apply();
-
 
         Log.i(TAG,"sending location to server");
         mSocket.emit("updatelocation",Double.toString(location.getLatitude()));
         // TODO use the following requestParams to create a JSON payload
-       /* final RequestParams requestParams = new RequestParams();
-        requestParams.put("latitude", Double.toString(location.getLatitude()));
-        requestParams.put("longitude", Double.toString(location.getLongitude()));
-
-        Double speedInMilesPerHour = location.getSpeed()* 2.2369;
-        requestParams.put("speed",  Integer.toString(speedInMilesPerHour.intValue()));
-
-        try {
-            requestParams.put("date", URLEncoder.encode(dateFormat.format(date), "UTF-8"));
-        } catch (UnsupportedEncodingException e) {}
-
-        requestParams.put("locationmethod", location.getProvider());
-
-        if (totalDistanceInMeters > 0) {
-            requestParams.put("distance", String.format("%.1f", totalDistanceInMeters / 1609)); // in miles,
-        } else {
-            requestParams.put("distance", "0.0"); // in miles
-        }
-
-        requestParams.put("username", sharedPreferences.getString("userName", ""));
-        requestParams.put("phonenumber", sharedPreferences.getString("appID", "")); // uuid
-        requestParams.put("sessionid", sharedPreferences.getString("sessionID", "")); // uuid
-
-        Double accuracyInFeet = location.getAccuracy()* 3.28;
-        requestParams.put("accuracy",  Integer.toString(accuracyInFeet.intValue()));
-
-        Double altitudeInFeet = location.getAltitude() * 3.28;
-        requestParams.put("extrainfo",  Integer.toString(altitudeInFeet.intValue()));
-
-        requestParams.put("eventtype", "android");
-
-        Float direction = location.getBearing();
-        requestParams.put("direction",  Integer.toString(direction.intValue()));*/
-
-        //final String uploadWebsite = sharedPreferences.getString("defaultUploadWebsite", defaultUploadWebsite);
-
-        /* TODO create a JSON payload of username, locationdata
-            Emit the Payload
-         */
-
-        /*LoopjHttpClient.get(uploadWebsite, requestParams, new AsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, org.apache.http.Header[] headers, byte[] responseBody) {
-                LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - success", uploadWebsite, requestParams, responseBody, headers, statusCode, null);
-                stopSelf();
-            }
-            @Override
-            public void onFailure(int statusCode, org.apache.http.Header[] headers, byte[] errorResponse, Throwable e) {
-                LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - failure", uploadWebsite, requestParams, errorResponse, headers, statusCode, e);
-                stopSelf();
-            }
-        });*/
     }
 
     @Override
@@ -210,11 +128,7 @@ public class LocationService extends Service implements
         if (location != null) {
             Log.e(TAG, "position: " + location.getLatitude() + ", " + location.getLongitude() + " accuracy: " + location.getAccuracy());
 
-            // we have our desired accuracy of 500 meters so lets quit this service,
-            // onDestroy will be called and stop our location uodates
             if (location.getAccuracy() < 500.0f) {
-                // TODO no need to stop location updates in our case
-               // stopLocationUpdates();
                 sendLocationDataToWebsite(location);
             }
         }
@@ -238,16 +152,13 @@ public class LocationService extends Service implements
         Log.d(TAG, "onConnected");
 
         mLocationRequest = LocationRequest.create();
-        mLocationRequest.setInterval(1000); // milliseconds
-        mLocationRequest.setFastestInterval(1000); // the fastest rate in milliseconds at which your app can handle location updates
+        mLocationRequest.setInterval(5000); // milliseconds
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        //mLocationClient.requestLocationUpdates(mLocationRequest, this);
         LocationServices.FusedLocationApi.requestLocationUpdates(mLocationClient, mLocationRequest, this);
 
         // connect to socket for upload
         mSocket.connect();
-
     }
 
     /**
@@ -255,9 +166,6 @@ public class LocationService extends Service implements
      * location client drops because of an error.
      */
 
-    /*
-     * TODO a good idea would be to try to restart/reconnect the service using alarm manager
-     */
     @Override
     public void onConnectionSuspended(int i) {
         Log.e(TAG, "onDisconnected");
@@ -294,11 +202,6 @@ public class LocationService extends Service implements
             new Handler(Looper.getMainLooper()).post(new Runnable() {
                 @Override
                 public void run() {
-                    /*
-                    Intent notifyIntent = new Intent("eatgreedi.mobile.com.egm.NotifyUser");
-                    notifyIntent.putExtra("message","some message");
-                    sendBroadcast(notifyIntent);
-                    */
                     Toast.makeText(getApplicationContext(),
                             "Some Message Received", Toast.LENGTH_LONG).show();
 

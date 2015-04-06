@@ -143,12 +143,6 @@ public class MainActivity extends ActionBarActivity {
                                     userInput.setError("Try again. 1 word only");
                             }
                         });
-                /*.setNegativeButton("Cancel",
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                dialog.cancel();
-                            }
-                        });*/
 
         // create alert dialog
         AlertDialog alertDialog = alertDialogBuilder.create();
@@ -250,11 +244,6 @@ public class MainActivity extends ActionBarActivity {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
                 @Override
                 public void run() {
-                    /*
-                    Intent notifyIntent = new Intent("eatgreedi.mobile.com.egm.NotifyUser");
-                    notifyIntent.putExtra("message","some message");
-                    sendBroadcast(notifyIntent);
-                    */
                     Toast.makeText(getApplicationContext(),
                             "Some Message Received in main", Toast.LENGTH_LONG).show();
                 }

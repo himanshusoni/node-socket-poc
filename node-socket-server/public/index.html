@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Node Cellar</title>
+    <title>DashBoard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -35,7 +35,7 @@
     <div class="navbar navbar-fixed-top" style="z-index: 10;">
         <div class="navbar-inner">
             <div class="container">
-                <a class="brand" href="#">Real Time Analytics</a>
+                <a class="brand" href="#">Dashboard</a>
             </div>
         </div>
     </div>
@@ -56,19 +56,19 @@
 
             <div class="span9">
 
-                <legend>Real Time Activity</legend>
+                <legend>Real Time Location Updates</legend>
                 <div class="row-fluid">
-                    <table id="visits" class="table table-bordered table-striped table-condensed">
+                    <table id="userUpdates" class="table table-bordered table-striped table-condensed">
                         <thead>
-                            <tr><td>Username</td><td>latitude</td><td>longitude</td><td>timestamp</td></tr>
+                            <tr><td>Username</td><td>Latitude</td><td>Longitude</td><td>Timestamp</td></tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
 
-                <legend>user status</legend>
+                <legend>User Status</legend>
                 <div class="row-fluid">
-                    <table id="pageViews" class="table table-bordered table-striped table-condensed">
+                    <table id="clientUsers" class="table table-bordered table-striped table-condensed">
                         <thead>
                             <tr><td>username</td><td>status</td></tr>
                         </thead>
@@ -85,15 +85,10 @@
 <script type="text/javascript" src="lib/jquery-1.8.2.min.js"></script>
 
 <script>
-	//var io = require('socket.io');
-	var SERVER_URL = "http://192.168.0.9:8100/admin";
-    //var io = io('/admin');
-    var socket = io(SERVER_URL);
     // connect to the admin namespaces
-    //socket = socket.of('/admin');
+    var SERVER_URL = "http://192.168.0.9:8100/admin";
+    var socket = io(SERVER_URL);
     var clients = {};
-    var pages = {};
-    var lastPageId = 0;
 
     socket.on('connect', function () {
         var totalconnections = 0;
@@ -106,7 +101,7 @@
             for(var key in data){
                 var uname = data[key];
                 clients[uname] = {username: uname, status : 'Active'};
-                 $('#pageViews tbody').append('<tr id = '+ uname +'><td>' + uname + '</td><td id="page Active"> Active </td><td><button type= "button" class="notifyuser">Notify</button></td></tr>');
+                 $('#clientUsers tbody').append('<tr id = '+ uname +'><td>' + uname + '</td><td id="page Active"> Active </td><td><button type= "button" class="notifyuser">Notify</button></td></tr>');
             }
         });
 
@@ -122,7 +117,7 @@
                     clients[msg.username].status = msg.status;
                 } else {
                     clients[msg.username] = {username: msg.username, status : msg.status};
-                    $('#pageViews tbody').append('<tr id = '+msg.username+'><td>' + msg.username + '</td><td id="page ' + msg.status + '">'+msg.status+'</td><td><button type= "button" class="notifyuser">Notify</button></td></tr>');
+                    $('#clientUsers tbody').append('<tr id = '+msg.username+'><td>' + msg.username + '</td><td id="page ' + msg.status + '">'+msg.status+'</td><td><button type= "button" class="notifyuser">Notify</button></td></tr>');
                 }
             }
         });
@@ -132,27 +127,25 @@
         socket.on('updatelocation', function (msg) {
             console.log('admin page, location update');
             if (msg.username) {
-                if ($('#visits tr').length > 10) {
-                    $('#visits tr:last').remove();
+                if ($('#userUpdates tr').length > 10) {
+                    $('#userUpdates tr:last').remove();
                 }
                 console.log("add row to locatios");
-                $('#visits tbody').prepend('<tr><td>' + msg.username + '</td><td>' + msg.latitude + '</td><td>' + msg.longitude + '</td><td>' + msg.timestamp + '</td></tr>');
+                $('#userUpdates tbody').prepend('<tr><td>' + msg.username + '</td><td>' + msg.latitude + '</td><td>' + msg.longitude + '</td><td>' + msg.timestamp + '</td></tr>');
             }
         });
 
         socket.on('disconnect', function () {
             //$('#connections').html(totalconnections-1);
+
         });
     });
-        $('.notifyuser').click(function(){
-           
-        });
 
-        $("#pageViews").on('click', '.notifyuser', function() {
-            var username = $(this).closest("tr").attr('id');
-            console.log('notifying user ' + username);
-            socket.emit('notifyuser',username);
-        });
+    $("#clientUsers").on('click', '.notifyuser', function() {
+        var username = $(this).closest("tr").attr('id');
+        console.log('notifying user ' + username);
+        socket.emit('notifyuser',username);
+    });
 
 
 </script>
